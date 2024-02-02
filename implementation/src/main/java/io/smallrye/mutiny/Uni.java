@@ -602,6 +602,19 @@ public interface Uni<T> {
     UniConvert<T> convert();
 
     /**
+     * Produces an {@link UniOnNotNull} with the item of the uni, if the item matches the predicate
+     * <p>
+     * This method is a shortcut for {@code map(value -> predicate.test(value) ? value : null).onItem().ifNotNull()}.
+     *
+     * @param predicate a predicate, must not be {@code null}
+     * @return the new {@link UniOnNotNull}
+     */
+    @CheckReturnValue
+    default UniOnNotNull<T> filter(Predicate<? super T> predicate) {
+        return map(value -> predicate.test(value) ? value : null).onItem().ifNotNull();
+    }
+
+    /**
      * Creates an instance of {@link Multi} from this {@link Uni}.
      * <p>
      * When a subscriber subscribes to the returned {@link Multi} and <strong>request</strong> an item, it subscribes

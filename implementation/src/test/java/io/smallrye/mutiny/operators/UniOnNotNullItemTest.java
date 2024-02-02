@@ -3,6 +3,7 @@ package io.smallrye.mutiny.operators;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -142,6 +143,46 @@ public class UniOnNotNullItemTest {
 
         assertThatThrownBy(() -> Uni.createFrom().<String> failure(new Exception("boom"))
                 .onItem().ifNotNull().call(s -> {
+                    invoked.set(true);
+                    return Uni.createFrom().item("something").onItem().invoke(called::set);
+                })
+                .onItem().ifNull().continueWith("yolo")
+                .await().indefinitely()).hasMessageContaining("boom");
+
+        assertThat(invoked).isFalse();
+        assertThat(called).hasValue(null);
+    }
+
+    @Test
+    public void testFilter() {
+        AtomicBoolean invoked = new AtomicBoolean();
+        AtomicReference<String> called = new AtomicReference<>();
+        assertThat(Uni.createFrom().item("hello")
+                .filter(value -> Objects.equals(value, "hello"))
+                .call(() -> {
+                    invoked.set(true);
+                    return Uni.createFrom().item("something").onItem().invoke(called::set);
+                })
+                .await().indefinitely()).isEqualTo("hello");
+        assertThat(invoked).isTrue();
+        assertThat(called).hasValue("something");
+
+        invoked.set(false);
+        called.set(null);
+        assertThat(Uni.createFrom().nullItem()
+                .filter(Objects::nonNull)
+                .call(s -> {
+                    invoked.set(true);
+                    return Uni.createFrom().item("something").onItem().invoke(called::set);
+                })
+                .onItem().ifNull().continueWith("yolo")
+                .await().indefinitely()).isEqualTo("yolo");
+        assertThat(invoked).isFalse();
+        assertThat(called).hasValue(null);
+
+        assertThatThrownBy(() -> Uni.createFrom().<String> failure(new Exception("boom"))
+                .filter(Objects::nonNull)
+                .call(s -> {
                     invoked.set(true);
                     return Uni.createFrom().item("something").onItem().invoke(called::set);
                 })
